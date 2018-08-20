@@ -13,6 +13,9 @@ use Env::Modulecmd { unload => 'java' };
 use Env::Modulecmd { load => 'java/1.8.0_45' };
 
 
+my $gsea="/home/regmond/Scratch/software/gsea-3.0.jar";
+my $rand_id=`od -N 4 -t uL -An /dev/urandom | tr -d " " | tr -d "\n"`;
+
 my @args=@ARGV;
 
 my $rnk='';
@@ -37,16 +40,20 @@ if (!-e "$gmx") {
 	return;
 }		
 if($min_set ne ''){
-	if(!isnum($min_set) || ($min_set < 0)){
+	if(!&isnum($min_set) || ($min_set < 0)){
 		usage_gsea("<$min_set> is not a valid number. Please insert an integer > 0");
 		return;
 	}	
+}else{
+	$min_set=15;
 }
 if($max_set ne ''){
-	if(!isnum($max_set) || ($max_set < 0)){
+	if(!&isnum($max_set) || ($max_set < 0)){
 		usage_gsea("<$max_set> is not a valid number. Please insert an integer > 0");
 		return;
 	}	
+}else{
+	$max_set=500;
 }
 
 my @suffix=(".txt",".gmt",".gmx",".rnk");
@@ -58,13 +65,38 @@ $runstr.=" -gmx $gmx";
 $runstr.=" -collapse false -mode Max_probe -norm meandiv -nperm 1000";
 $runstr.=" -rnk $rnk";
 $runstr.=" -scoring_scheme weighted";
-$runstr.=" -rpt_label ${basename_rnk}_${basename_gmx}";
+#$runstr.=" -rpt_label ${basename_rnk}_${basename_gmx}";
 $runstr.=" -include_only_symbols true -make_sets true -plot_top_x 20 -rnd_seed timestamp";
-$runstr.=" -set_max 2000 -set_min 3 -zip_report false";
-#$runstr.=" -out ./gsea_results";
+$runstr.=" -set_max $max_set -set_min $min_set -zip_report false";
+$runstr.=" -out ./gsea_results_${basename_rnk}_${basename_gmx}_${rand_id}";
 $runstr.=" -gui false";
 `$runstr`;
 
+my @genesets=();
+opendir(DIR, "./gsea_results_${basename_rnk}_${basename_gmx}_${rand_id}");
+my @dirs= grep { /^my_analysis.GseaPreranked/ } readdir (DIR);
+my $dir=$dirs[0];
+opendir(DIR2, "./gsea_results_${basename_rnk}_${basename_gmx}_${rand_id}/$dir");
+my @files= grep { !/.html$/ && !/^gsea_report_for_na/ && !/pos_snapshot/ && !/neg_snapshot/} readdir (DIR);
+foreach my $file(@files){
+	$file=~s/\.html//;
+	push(@genesets, $file);
+}
+close(DIR2);
+close(DIR);
+
+my $runstr2="java -Xmx512m -cp ./gsea3.0/gsea-3.0.jar xtools.gsea.LeadingEdgeTool";
+$runstr2.=" -dir ./gsea_results_${basename_rnk}_${basename_gmx}_${rand_id}/$dir";
+$runstr2.=" -out ./gsea_results_${basename_rnk}_${basename_gmx}_${rand_id}";
+$runstr2.=" -gsets ".join(",", @genesets);
+`$runstr2`;
+
+
+
+sub isnum ($) {
+    return 0 if $_[0] eq '';
+    $_[0] ^ $_[0] ? 0 : 1
+}
 
 
 
@@ -80,7 +112,7 @@ sub print_usage {
 	my $usage5="\tUsage:   run_gsea --rnk FILE.rnk --gmt FILE.gmt [options]";
 	my $usage6="\t";
 	my $usage7="\tRequired: --rnk FILE	Ranked list of genes. Needs a column with gene names and a column with the stat";
-	my $usage8="\t          --gmt FILE		Gene sets in GMT format (https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29)";
+	my $usage8="\t          --gmx FILE		Gene sets in GMT format (https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29)";
 	my $usage9="\t";
 	my $usage10="\tOptions: --set_min NUM     Ignore gene sets that contain less than NUM genes [15]";
 	my $usage11="\t         --set_max NUM	Ignore gene sets that contain more than NUM genes [500]";
@@ -105,9 +137,9 @@ sub usage_gsea {
 	Usage:   run_gsea --rnk FILE.rnk --gmt FILE.gmt [options]";
 
 	Required: --rnk FILE	Ranked list of genes. Needs a column with gene names and a column with the stat";
-	          --gmt FILE		Gene sets in GMT format (https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29)";
-	Options: --set_max NUM	Ignore gene sets that contain more than NUM genes [500]";
-	         --set_min NUM	Ignore gene sets that contain less than NUM genes [15]";
+	          --gmx FILE		Gene sets in GMT format (https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29)";
+	Options: --set_min NUM	Ignore gene sets that contain less than NUM genes [15]";
+	         --set_max NUM	Ignore gene sets that contain more than NUM genes [500]";
 
 	ERROR: $error
 
