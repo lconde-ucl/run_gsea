@@ -15,7 +15,7 @@ data<-data %>%  mutate(FDR=p.adjust(FDR_p, method="BH"))
 
 #- get plot (based on code from https://www.biostars.org/p/168044/)
 
-png("final_plot.png", width=800)
+png("final_plot.png", width=600)
 p <- ggplot(data, aes(NES, GENESET)) + 
     geom_point(aes(colour=FDR, size=RATIO)) +
     scale_color_gradient(limits=c(0, 0.10), low="red", high="white") +
@@ -27,7 +27,7 @@ p <- ggplot(data, aes(NES, GENESET)) +
           axis.title.y=element_blank()) +
     expand_limits(x=c(-rangeNES,rangeNES)) +
     scale_x_continuous(breaks=seq(-rangeNES, rangeNES, 2)) +
-    facet_grid(.~RANK+TYPE)
+    facet_grid(.~RANK)
 print(p)
 dev.off()
 

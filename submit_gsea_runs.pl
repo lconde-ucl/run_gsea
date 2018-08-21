@@ -66,21 +66,21 @@ foreach my $i(keys %header){
 	        $runstr.=" -set_max $max_set -set_min $min_set -zip_report false";
 	        $runstr.=" -out ./$data[$j]_${rnk}_${geneset[$j]}";
 	        $runstr.=" -gui false";
-#	        print $runstr."\n\n";
-		`$runstr`;
+	        print $runstr."\n\n";
+#		`$runstr`;
 	}
 	$all_genesets.=" > all.gmt";
 	`$all_genesets`;
 
-#	print "run_gsea.pl --rnk data/${rnk}.rnk --gmx all.gmt --out all --min_set $min_set --max_set $max_set\n";
-	system("run_gsea.pl --rnk data/${rnk}.rnk --gmx all.gmt --out all --min_set $min_set --max_set $max_set");
+	print "run_gsea.pl --rnk data/${rnk}.rnk --gmx all.gmt --out all --min_set $min_set --max_set $max_set\n";
+#	system("run_gsea.pl --rnk data/${rnk}.rnk --gmx all.gmt --out all --min_set $min_set --max_set $max_set");
 	system("rm all.gmt");
 	
 }
 
 
 open(OUTF, ">final_table.txt");
-print OUTF "RANK\tTYPE\tGENESET\tGENESET_SIZE\tLEADING_EDGE_GENES\tRATIO\tFDR_p\tNES\n";
+print OUTF "RANK\tGENESET\tGENESET_SIZE\tLEADING_EDGE_GENES\tRATIO\tFDR_p\tNES\n";
 opendir(DIR2, "./");
 my @dirs2=grep { /^all_.*_all/ } readdir (DIR2);
 foreach my $dir2(@dirs2){
@@ -94,10 +94,6 @@ foreach my $dir2(@dirs2){
 	opendir(D, "./$dir2/$dir");
 	my @files= grep { /.xls$/ && /^gsea_report_for_na/} readdir (D);
 	foreach my $file(@files){
-		my $type;
-		if($file=~/gsea_report_for_na_(.*)_.*.xls/){
-			$type=$1;
-		}
 		open(INF, "./$dir2/$dir/$file") || die "$! ./$dir2/$dir/$file\n";
 		while(<INF>){
 			chomp $_;
@@ -116,7 +112,7 @@ foreach my $dir2(@dirs2){
 			}
 			close(INF2);
 			my $ratio=sprintf("%.2f", $count/$a[3]);
-			print OUTF $rnk."\t".$type."\t".$a[0]."\t".$a[3]."\t".$count."\t".$ratio."\t".$a[7]."\t".$a[5]."\n";
+			print OUTF $rnk."\t".$a[0]."\t".$a[3]."\t".$count."\t".$ratio."\t".$a[7]."\t".$a[5]."\n";
 		}
 		close(INF);
 	}
