@@ -66,14 +66,14 @@ foreach my $i(keys %header){
 	        $runstr.=" -set_max $max_set -set_min $min_set -zip_report false";
 	        $runstr.=" -out ./$data[$j]_${rnk}_${geneset[$j]}";
 	        $runstr.=" -gui false";
-	        print $runstr."\n\n";
-#		`$runstr`;
+#	        print $runstr."\n\n";
+		`$runstr`;
 	}
 	$all_genesets.=" > all.gmt";
 	`$all_genesets`;
 
-	print "run_gsea.pl --rnk data/${rnk}.rnk --gmx all.gmt --out all --min_set $min_set --max_set $max_set\n";
-#	system("run_gsea.pl --rnk data/${rnk}.rnk --gmx all.gmt --out all --min_set $min_set --max_set $max_set");
+#	print "run_gsea.pl --rnk data/${rnk}.rnk --gmx all.gmt --out all --min_set $min_set --max_set $max_set\n";
+	system("run_gsea.pl --rnk data/${rnk}.rnk --gmx all.gmt --out all --min_set $min_set --max_set $max_set");
 	system("rm all.gmt");
 	
 }
