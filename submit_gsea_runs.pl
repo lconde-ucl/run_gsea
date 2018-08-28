@@ -13,7 +13,7 @@ use Env::Modulecmd { unload => 'java' };
 use Env::Modulecmd { load => 'java/1.8.0_45' };
 
 
-my $min_set=10;
+my $min_set=15;
 my $max_set=500;
 
 
@@ -44,6 +44,7 @@ close(INF);
 
 foreach my $i(keys %header){
 	my $rnk=$header{$i};
+	
 	my @data=@{$data->{$rnk}};
 
 	($rnk =~/LUAD/) && next;
@@ -52,7 +53,7 @@ foreach my $i(keys %header){
 	my $all_genesets="cat ";
 	for (my $j=0;$j<scalar @data;$j++){
 
-		($data[$j] eq 'x') && next;
+####		($data[$j] eq 'x') && next;
 
 		$all_genesets.="data/${geneset[$j]}.gmt ";
 
@@ -66,21 +67,24 @@ foreach my $i(keys %header){
 	        $runstr.=" -set_max $max_set -set_min $min_set -zip_report false";
 	        $runstr.=" -out ./$data[$j]_${rnk}_${geneset[$j]}";
 	        $runstr.=" -gui false";
-	        print $runstr."\n\n";
+#	        print $runstr."\n\n";
 #		`$runstr`;
 	}
 	$all_genesets.=" > all.gmt";
 	`$all_genesets`;
 
 	print "run_gsea.pl --rnk data/${rnk}.rnk --gmx all.gmt --out all --min_set $min_set --max_set $max_set\n";
-#	system("run_gsea.pl --rnk data/${rnk}.rnk --gmx all.gmt --out all --min_set $min_set --max_set $max_set");
+	system("run_gsea.pl --rnk data/${rnk}.rnk --gmx all.gmt --out all --min_set $min_set --max_set $max_set");
 	system("rm all.gmt");
 	
 }
 
 
-open(OUTF, ">final_table.txt");
-print OUTF "RANK\tGENESET\tGENESET_SIZE\tLEADING_EDGE_GENES\tRATIO\tFDR_p\tNES\n";
+my %genes=();
+my %ranks=();
+my %leadingedgegenes=();
+open(OUTF, ">gsea_table.txt");
+print OUTF "RANK\tGENESET\tGENESET_ORIGINAL_SIZE\tGENESET_SIZE_IN_DATA\tLEADING_EDGE_GENES\tRATIO\tRATIO_ORIGINAL_SIZE\tFDR_p\tNES\n";
 opendir(DIR2, "./");
 my @dirs2=grep { /^all_.*_all/ } readdir (DIR2);
 foreach my $dir2(@dirs2){
@@ -89,8 +93,19 @@ foreach my $dir2(@dirs2){
 	if($dir2 =~/^all_(.*)_all/){
 		$rnk=$1;
 	}
+	$ranks{$rnk}=1;
 	my @dirs= grep { /^my_analysis.GseaPreranked/ } readdir (DIR);
 	my $dir=$dirs[0];
+	#- orioginal geneset sizes
+	my %originalsize=();
+	open(INF, "./$dir2/$dir/gene_set_sizes.xls");
+	while(<INF>){
+		chomp $_;
+		my @a=split("\t",$_);
+		($a[0] eq 'NAME') && next;
+		$originalsize{$a[0]}=$a[1];
+	}
+	close(INF);
 	opendir(D, "./$dir2/$dir");
 	my @files= grep { /.xls$/ && /^gsea_report_for_na/} readdir (D);
 	foreach my $file(@files){
@@ -106,13 +121,18 @@ foreach my $dir2(@dirs2){
 				chomp $_;
 				my @a=split("\t",$_);
 				($a[0] eq 'NAME') && next;
+				
+				$genes{$a[1]}=1;
+				
 				if($a[7] eq 'Yes'){
+					$leadingedgegenes{$rnk}{$a[1]}=1;
 					$count++;
 				}
 			}
 			close(INF2);
 			my $ratio=sprintf("%.2f", $count/$a[3]);
-			print OUTF $rnk."\t".$a[0]."\t".$a[3]."\t".$count."\t".$ratio."\t".$a[7]."\t".$a[5]."\n";
+			my $ratiooriginal=sprintf("%.2f", $count/$originalsize{$a[0]});
+			print OUTF $rnk."\t".$a[0]."\t".$originalsize{$a[0]}."\t".$a[3]."\t".$count."\t".$ratio."\t".$ratiooriginal."\t".$a[7]."\t".$a[5]."\n";
 		}
 		close(INF);
 	}
@@ -124,3 +144,21 @@ close(OUTF);
 
 `R CMD BATCH plot.R`;
 
+my @ranks=sort (keys %ranks);
+my @genes=sort (keys %genes);
+open(OUTF, ">circlize_table.txt");
+print OUTF "Gene\t".join("\t", @ranks)."\n";
+foreach my $gene(@genes){
+	my @data=();
+	foreach my $rank(@ranks){
+		if($leadingedgegenes{$rank}{$gene}){
+			push(@data, "1");
+		}else{
+			push(@data, "0");
+		}
+	}
+	print OUTF $gene."\t".join("\t", @data)."\n";
+}
+close(OUTF);
+
+ 

@@ -89,11 +89,11 @@ foreach my $gmx(@gmxs){
 	`$runstr`;	
 	
 	my @genesets=();
-	opendir(DIR, "./${output}_${basename_rnk}_${basename_gmx}_${rand_id}");
+	opendir(DIR, "./${output}_${basename_rnk}_${basename_gmx}_${rand_id}") || die "MAL\n";
 	my @dirs= grep { /^my_analysis.GseaPreranked/ } readdir (DIR);
 	my $dir=$dirs[0];
-	opendir(DIR2, "./gsea_results_${basename_rnk}_${basename_gmx}_${rand_id}/$dir");
-	my @files= grep { !/.html$/ && !/^gsea_report_for_na/ && !/pos_snapshot/ && !/neg_snapshot/} readdir (DIR);
+	opendir(DIR2, "./${output}_${basename_rnk}_${basename_gmx}_${rand_id}/$dir") || die "MAL\n";;
+	my @files= grep { /.html$/ && !/^index.html$/ && !/^gsea_report_for_na/ && !/pos_snapshot/ && !/neg_snapshot/} readdir (DIR2);
 	foreach my $file(@files){
 		$file=~s/\.html//;
 		push(@genesets, $file);
@@ -101,10 +101,11 @@ foreach my $gmx(@gmxs){
 	close(DIR2);
 	close(DIR);
 	
+
 	my $runstr2="java -Xmx512m -cp $gsea xtools.gsea.LeadingEdgeTool";
 	$runstr2.=" -dir ./${output}_${basename_rnk}_${basename_gmx}_${rand_id}/$dir";
 	$runstr2.=" -out ./${output}_${basename_rnk}_${basename_gmx}_${rand_id}";
-	$runstr2.=" -extraPlots TRUE";
+	$runstr2.=" -extraPlots TRUE -gui FALSE";
 	$runstr2.=" -gsets ".join(",", @genesets);
 	`$runstr2`;
 }
