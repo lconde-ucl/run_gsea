@@ -22,6 +22,7 @@ my $rnk='';
 my $gm='';	
 my $min_set="";
 my $max_set="";
+my $perm="";
 my $output="";
 GetOptionsFromArray (
     \@args,
@@ -30,6 +31,7 @@ GetOptionsFromArray (
     "out=s"   => \$output,
     "min_set=i"   => \$min_set,
     "max_set=i"   => \$max_set,
+    "perm=i"   => \$perm,
     "<>"   => \&print_usage
 ) or die "\n";
 
@@ -69,6 +71,14 @@ if($max_set ne ''){
 }else{
 	$max_set=500;
 }
+if($perm ne ''){
+	if(!&isnum($perm) || ($perm < 0)){
+		usage_gsea("<$perm> is not a valid number. Please insert an integer > 0");
+		return;
+	}	
+}else{
+	$perm=1000;
+}
 
 my @suffix=(".txt",".gmt",".gmx",".rnk");
 my $basename_rnk = basename($rnk, @suffix);
@@ -76,9 +86,9 @@ my $basename_rnk = basename($rnk, @suffix);
 foreach my $gmx(@gmxs){
 	my $basename_gmx = basename($gmx, @suffix);
 	
-	my $runstr="java -Xmx512m -cp $gsea xtools.gsea.GseaPreranked";
+	my $runstr="java -Xmx4096m -cp $gsea xtools.gsea.GseaPreranked";
 	$runstr.=" -gmx $gmx";
-	$runstr.=" -collapse false -mode Max_probe -norm meandiv -nperm 1000";
+	$runstr.=" -collapse false -mode Max_probe -norm meandiv -nperm $perm";
 	$runstr.=" -rnk $rnk";
 	$runstr.=" -scoring_scheme weighted";
 	#$runstr.=" -rpt_label ${basename_rnk}_${basename_gmx}";
@@ -134,13 +144,14 @@ sub print_usage {
 	my $usage9="\t";
 	my $usage10="\tOptions: --set_min NUM     Ignore gene sets that contain less than NUM genes [15]";
 	my $usage11="\t         --set_max NUM	Ignore gene sets that contain more than NUM genes [500]";
-	my $usage12="\t         --out TEXT	Outputdir prefix [gsea_results_]";
-        my $usage13="\t";
+	my $usage12="\t         --perm NUM	Number of permutations [1000]";
+	my $usage13="\t         --out TEXT	Outputdir prefix [gsea_results_]";
+        my $usage14="\t";
 
 	print "$usage0\n$usage1\n$usage2\n$usage3";
 	print "$usage4\n$usage5\n$usage6\n$usage7\n";
 	print "$usage8\n$usage9\n$usage10\n";
-	print "$usage11\n$usage12\n$usage13\n";
+	print "$usage11\n$usage12\n$usage13\t$usage14\n";
 
 	die "ERROR: Invalid argument '@a'. Please check above the usage of this script\n";
 
@@ -158,6 +169,7 @@ sub usage_gsea {
 	Required: --rnk FILE	Ranked list of genes. Needs a column with gene names and a column with the stat
 	          --gmx FILE		Gene sets in GMT format (https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29)
 	Options: --set_min NUM	Ignore gene sets that contain less than NUM genes [15]
+		 --perm NUM	Number of permutations [1000]
 	         --set_max NUM	Ignore gene sets that contain more than NUM genes [500]
   		 --out TEXT	Outputdir prefix [gsea_results_]
 
