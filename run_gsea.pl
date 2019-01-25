@@ -9,11 +9,23 @@ no warnings qw/uninitialized/;
 use Getopt::Long qw(GetOptionsFromArray :config pass_through no_auto_abbrev bundling);
 use File::Basename;
 
-use Env::Modulecmd { unload => 'java' };
-use Env::Modulecmd { load => 'java/1.8.0_45' };
+
+#Check if we are in the cluster and act accordingly
+my $host=`hostname`;
+
+if($host =~ m/myriad|legion/i) {
+    use Env::Modulecmd { unload => 'java' };
+    use Env::Modulecmd { load => 'java/1.8.0_45' };
+}
+
+my $gsea="gsea-3.0.jar";
+
+#Check if GSEA jar exists and fail graciously otherwise
+if(!-e $gsea) {
+    die "ERROR: GSEA jar file not found [$gsea]. Please download the software or if needed edit this script with the correct path.\n";
+}
 
 
-my $gsea="/home/regmond/Scratch/software/gsea-3.0.jar";
 my $rand_id=`od -N 4 -t uL -An /dev/urandom | tr -d " " | tr -d "\n"`;
 
 my @args=@ARGV;
@@ -140,12 +152,12 @@ sub print_usage {
 	my $usage5="\tUsage:   run_gsea --rnk FILE.rnk --gmx FILE.gmt [options]";
 	my $usage6="\t";
 	my $usage7="\tRequired: --rnk FILE	Ranked list of genes. Needs a column with gene names and a column with the stat";
-	my $usage8="\t          --gmx FILE		Gene sets in GMT format (https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29)";
+	my $usage8="\t          --gmx FILE		Gene sets in GMT format (transposed GMX) (https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29)";
 	my $usage9="\t";
-	my $usage10="\tOptions: --set_min NUM     Ignore gene sets that contain less than NUM genes [15]";
-	my $usage11="\t         --set_max NUM	Ignore gene sets that contain more than NUM genes [500]";
+	my $usage10="\tOptions: --min_set NUM     Ignore gene sets that contain less than NUM genes [15]";
+	my $usage11="\t         --max_set NUM	Ignore gene sets that contain more than NUM genes [500]";
 	my $usage12="\t         --perm NUM	Number of permutations [1000]";
-	my $usage13="\t         --out TEXT	Outputdir prefix [gsea_results_]";
+	my $usage13="\t         --out TEXT	Outputdir prefix [gsea_results]";
         my $usage14="\t";
 
 	print "$usage0\n$usage1\n$usage2\n$usage3";
@@ -167,11 +179,11 @@ sub usage_gsea {
 	Usage:   run_gsea --rnk FILE.rnk --gmx FILE.gmt [options]
 
 	Required: --rnk FILE	Ranked list of genes. Needs a column with gene names and a column with the stat
-	          --gmx FILE		Gene sets in GMT format (https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29)
-	Options: --set_min NUM	Ignore gene sets that contain less than NUM genes [15]
+	          --gmx FILE		Gene sets in GMT format (transposed GMX) (https://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#GMT:_Gene_Matrix_Transposed_file_format_.28.2A.gmt.29)
+	Options: --min_set NUM	Ignore gene sets that contain less than NUM genes [15]
 		 --perm NUM	Number of permutations [1000]
-	         --set_max NUM	Ignore gene sets that contain more than NUM genes [500]
-  		 --out TEXT	Outputdir prefix [gsea_results_]
+	         --max_set NUM	Ignore gene sets that contain more than NUM genes [500]
+  		 --out TEXT	Outputdir prefix [gsea_results]
 
 	ERROR: $error
 
