@@ -123,14 +123,67 @@ foreach my $gmx(@gmxs){
 	close(DIR2);
 	close(DIR);
 	
-
 	my $runstr2="java -Xmx512m -cp $gsea xtools.gsea.LeadingEdgeTool";
 	$runstr2.=" -dir ./${output}_${basename_rnk}_${basename_gmx}_${rand_id}/$dir";
 	$runstr2.=" -out ./${output}_${basename_rnk}_${basename_gmx}_${rand_id}";
 	$runstr2.=" -extraPlots TRUE -gui FALSE";
 	$runstr2.=" -gsets ".join(",", @genesets);
 	`$runstr2`;
+
+
+	open(OUTF, ">gsea_table_${basename_rnk}_${basename_gmx}.txt");
+	print OUTF "RANK\tGENESET\tGENESET_ORIGINAL_SIZE\tGENESET_SIZE_IN_DATA\tLEADING_EDGE_GENES\tRATIO\tRATIO_ORIGINAL_SIZE\tFDR_p\tNES\n";
+	my $dir2 = "${output}_${basename_rnk}_${basename_gmx}_${rand_id}"
+	opendir(DIR, "./$dir2");
+	my @dirs= grep { /^my_analysis.GseaPreranked/ } readdir (DIR);
+	my $dir=$dirs[0];
+
+	#- orioginal geneset sizes
+	my %originalsize=();
+	open(INF, "./$dir2/$dir/gene_set_sizes.xls");
+	while(<INF>){
+		chomp $_;
+		my @a=split("\t",$_);
+		($a[0] eq 'NAME') && next;
+		$originalsize{$a[0]}=$a[1];
+	}
+	close(INF);
+	opendir(D, "./$dir2/$dir");
+	my @files= grep { /.xls$/ && /^gsea_report_for_na/} readdir (D);
+	foreach my $file(@files){
+		open(INF, "./$dir2/$dir/$file") || die "$! ./$dir2/$dir/$file\n";
+		while(<INF>){
+			chomp $_;
+			my @a=split("\t",$_);
+			($a[0] eq 'NAME') && next;
+			
+			my $count=0;
+			open(INF2, "./$dir2/$dir/$a[0].xls");
+			while(<INF2>){
+				chomp $_;
+				my @a=split("\t",$_);
+				($a[0] eq 'NAME') && next;
+				
+				$genes{$a[1]}=1;
+				
+				if($a[7] eq 'Yes'){
+					$leadingedgegenes{$rnk}{$a[1]}=1;
+					$count++;
+				}
+			}
+			close(INF2);
+			my $ratio=sprintf("%.2f", $count/$a[3]);
+			my $ratiooriginal=sprintf("%.2f", $count/$originalsize{$a[0]});
+			print OUTF $rnk."\t".$a[0]."\t".$originalsize{$a[0]}."\t".$a[3]."\t".$count."\t".$ratio."\t".$ratiooriginal."\t".$a[7]."\t".$a[5]."\n";
+		}
+		close(INF);
+	}
+	closedir(D);
+	closedir(DIR);
+
+	########`PERM=$perm FILE=gsea_table_${basename_rnk}_${basename_gmx}.txt R CMD BATCH plot.R`;
 }
+
 
 
 sub isnum ($) {

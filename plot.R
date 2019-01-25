@@ -2,13 +2,17 @@ library(ggplot2)
 library(dplyr)
 
 
-data<-read.table("gsea_table.txt", sep="\t", header=T)
+file <- as.character(Sys.getenv("FILE"))
+perm <- as.character(Sys.getenv("PERM"))
+
+
+data<-read.table(file, sep="\t", header=T)
 
 #- Get range of NES for ylim
 rangeNES=round(max(abs(max(data$NES)), abs(min(data$NES)))+0.5)
 
 #- Replace FDR = 0 to FDR = 0.001 (as this was run on 1000 iterations)
-data$FDR_p[data$FDR_p == 0] <- 0.001
+data$FDR_p[data$FDR_p == 0] <- (1/perm)
 
 #- and readjust pvalues
 data<-data %>%  mutate(FDR=p.adjust(FDR_p, method="BH"))
