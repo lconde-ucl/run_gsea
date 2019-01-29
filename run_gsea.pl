@@ -18,7 +18,7 @@ if($host =~ m/myriad|legion/i) {
     use Env::Modulecmd { load => 'java/1.8.0_45' };
 }
 
-my $gsea="gsea-3.0.jar";
+my $gsea="/home/regmond/Scratch/software/gsea-3.0.jar";
 
 #Check if GSEA jar exists and fail graciously otherwise
 if(!-e $gsea) {
@@ -111,10 +111,11 @@ foreach my $gmx(@gmxs){
 	`$runstr`;	
 	
 	my @genesets=();
-	opendir(DIR, "./${output}_${basename_rnk}_${basename_gmx}_${rand_id}") || die "MAL\n";
+	my $dir2 = "${output}_${basename_rnk}_${basename_gmx}_${rand_id}";
+	opendir(DIR, "./${dir2}") || die "MAL\n";
 	my @dirs= grep { /^my_analysis.GseaPreranked/ } readdir (DIR);
 	my $dir=$dirs[0];
-	opendir(DIR2, "./${output}_${basename_rnk}_${basename_gmx}_${rand_id}/$dir") || die "MAL\n";;
+	opendir(DIR2, "${dir2}/${dir}") || die "MAL\n";;
 	my @files= grep { /.html$/ && !/^index.html$/ && !/^gsea_report_for_na/ && !/pos_snapshot/ && !/neg_snapshot/} readdir (DIR2);
 	foreach my $file(@files){
 		$file=~s/\.html//;
@@ -133,10 +134,6 @@ foreach my $gmx(@gmxs){
 
 	open(OUTF, ">gsea_table_${basename_rnk}_${basename_gmx}.txt");
 	print OUTF "RANK\tGENESET\tGENESET_ORIGINAL_SIZE\tGENESET_SIZE_IN_DATA\tLEADING_EDGE_GENES\tRATIO\tRATIO_ORIGINAL_SIZE\tFDR_p\tNES\n";
-	my $dir2 = "${output}_${basename_rnk}_${basename_gmx}_${rand_id}"
-	opendir(DIR, "./$dir2");
-	my @dirs= grep { /^my_analysis.GseaPreranked/ } readdir (DIR);
-	my $dir=$dirs[0];
 
 	#- orioginal geneset sizes
 	my %originalsize=();
@@ -149,13 +146,15 @@ foreach my $gmx(@gmxs){
 	}
 	close(INF);
 	opendir(D, "./$dir2/$dir");
-	my @files= grep { /.xls$/ && /^gsea_report_for_na/} readdir (D);
-	foreach my $file(@files){
+	my @files2= grep { /.xls$/ && /^gsea_report_for_na/} readdir (D);
+	foreach my $file(@files2){
 		open(INF, "./$dir2/$dir/$file") || die "$! ./$dir2/$dir/$file\n";
 		while(<INF>){
 			chomp $_;
 			my @a=split("\t",$_);
 			($a[0] eq 'NAME') && next;
+			
+			(!-e "./$dir2/$dir/$a[0].xls") && next;
 			
 			my $count=0;
 			open(INF2, "./$dir2/$dir/$a[0].xls");
@@ -164,10 +163,7 @@ foreach my $gmx(@gmxs){
 				my @a=split("\t",$_);
 				($a[0] eq 'NAME') && next;
 				
-				$genes{$a[1]}=1;
-				
 				if($a[7] eq 'Yes'){
-					$leadingedgegenes{$rnk}{$a[1]}=1;
 					$count++;
 				}
 			}
